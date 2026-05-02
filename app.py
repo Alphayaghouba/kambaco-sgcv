@@ -849,6 +849,88 @@ def manifest():
 def static_files(filename):
     return send_from_directory('static', filename)
 
+# ================== INIT DB ==================
+@app.route('/init-db')
+def init_db():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS familles (
+                id SERIAL PRIMARY KEY,
+                nom VARCHAR(50) NOT NULL,
+                description TEXT
+            );
+            
+            INSERT INTO familles (nom, description) VALUES 
+                ('Dowsaré', 'Famille Dowsaré'),
+                ('Horé Pety', 'Famille Horé Pety'),
+                ('Bayero', 'Famille Bayero'),
+                ('Horé Bhoundou', 'Famille Horé Bhoundou'),
+                ('Djogho', 'Famille Djogho'),
+                ('Silaty', 'Famille Silaty')
+            ON CONFLICT DO NOTHING;
+            
+            CREATE TABLE IF NOT EXISTS membres (
+                id SERIAL PRIMARY KEY,
+                nom VARCHAR(100) NOT NULL,
+                prenom VARCHAR(100),
+                telephone VARCHAR(20) NOT NULL,
+                email VARCHAR(150),
+                password VARCHAR(255),
+                pays_code VARCHAR(5) DEFAULT '+224',
+                statut_matrimonial VARCHAR(20),
+                role VARCHAR(20) DEFAULT 'membre',
+                famille_id INTEGER REFERENCES familles(id),
+                statut_inscription VARCHAR(20) DEFAULT 'en_attente',
+                statut_membre VARCHAR(20) DEFAULT 'actif',
+                code_otp VARCHAR(6),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            INSERT INTO membres (nom, prenom, telephone, email, password, role, statut_inscription, statut_membre, famille_id) 
+            VALUES ('Admin', 'Principal', '+224620000000', 'admin@kambaco.com', 'admin123', 'admin', 'valide', 'actif', 1)
+            ON CONFLICT DO NOTHING;
+            
+            CREATE TABLE IF NOT EXISTS cotisations (
+                id SERIAL PRIMARY KEY,
+                membre_id INTEGER REFERENCES membres(id),
+                annee INTEGER NOT NULL,
+                montant NUMERIC NOT NULL,
+                penalite NUMERIC DEFAULT 0,
+                statut VARCHAR(20) DEFAULT 'en_attente',
+                date_paiement TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS cagnottes (
+                id SERIAL PRIMARY KEY,
+                titre VARCHAR(200) NOT NULL,
+                description TEXT,
+                montant_objectif NUMERIC NOT NULL,
+                montant_collecte NUMERIC DEFAULT 0,
+                date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                date_fin DATE,
+                statut VARCHAR(20) DEFAULT 'actif'
+            );
+            
+            CREATE TABLE IF NOT EXISTS contributions_cagnotte (
+                id SERIAL PRIMARY KEY,
+                cagnotte_id INTEGER REFERENCES cagnottes(id),
+                membre_id INTEGER REFERENCES membres(id),
+                montant NUMERIC NOT NULL,
+                date_contribution TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return "<h1>✅ Base de données initialisée avec succès !</h1><a href='/'>Retour au site</a>"
+    except Exception as e:
+        return f"<h1>❌ Erreur : {str(e)}</h1>"
+
 # ================== DÉMARRAGE ==================
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
