@@ -11,6 +11,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.units import mm
 import hashlib
+import os
+
 
 app = Flask(__name__)
 
@@ -20,11 +22,11 @@ def hash_password(password):
     return password  # Temporaire - sans hashage
 
 def get_db_connection():
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        database_url = 'postgresql://postgres:admin123@localhost:5432/village_db'
     conn = psycopg2.connect(
-        host="localhost",
-        database="village_db",
-        user="postgres",
-        password="admin123",
+        database_url,
         cursor_factory=RealDictCursor
     )
     return conn
